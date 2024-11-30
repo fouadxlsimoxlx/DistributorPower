@@ -1,27 +1,65 @@
 package Dist;
 
 import jade.core.Agent;
-import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.lang.acl.ACLMessage;
 
 public class House extends Agent {
-    private String localDistributor;
+    private boolean requestDenied = false;
+    private int currentHour = 0;
 
+    @Override
     protected void setup() {
-        Object[] args = getArguments();
-        localDistributor = (args != null && args.length > 0) ? (String) args[0] : "Local1";
-
-        System.out.println(getLocalName() + " is under " + localDistributor);
-        addBehaviour(new SendRequestBehaviour());
+        addBehaviour(new RequestElectricityBehaviour());
+        addBehaviour(new HandleReplyBehaviour());
     }
 
-    private class SendRequestBehaviour extends OneShotBehaviour {
-        @Override
-        public void action() {
-            ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-            msg.setContent("Request from " + getLocalName());
-            msg.addReceiver(getAID(localDistributor));
-            send(msg);
+    private class RequestElectricityBehaviour extends TickerBehaviour {
+        public RequestElectricityBehaviour() {
+            super(House.this, 1000);  // Request every second (1 second = 1 tick)
         }
+
+        @Override
+        protected void onTick() {
+            if (!requestDenied && currentHour < 24) {
+                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+                msg.addReceiver(getAID("LocalDistributor1"));  // Assuming LocalDistributor1 is the distributor
+                msg.setContent("request-electricity-100");  // Requesting 100 units
+                send(msg);
+                log("Requested 100 units of electricity. Hour: " + currentHour);
+            }
+            currentHour++;
+            if (currentHour == 24) {
+                log("Simulation ended for the day.");
+                stop();
+            }
+        }
+    }
+
+    private class HandleReplyBehaviour extends TickerBehaviour {
+        public HandleReplyBehaviour() {
+            super(House.this, 500);  // Check for reply every 500 ms
+        }
+
+        @Override
+        protected void onTick() {
+            ACLMessage reply = receive();
+            if (reply != null) {
+                String content = reply.getContent();
+                if (content.contains("electricity-granted")) {
+                    log("Electricity granted.");
+                } else if (content.contains("electricity-denied")) {
+                    log("Electricity request denied.");
+                    requestDenied = true;  // Stop making requests if denied
+                }
+            } else {
+                block();
+            }
+        }
+    }
+
+    private void log(String message) {
+        // Log messages to the console
+        System.out.println(getLocalName() + ": " + message);
     }
 }

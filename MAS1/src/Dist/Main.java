@@ -9,38 +9,40 @@ import jade.wrapper.StaleProxyException;
 
 public class Main {
     public static void main(String[] args) {
-        // Create JADE runtime instance
         Runtime runtime = Runtime.instance();
         Profile profile = new ProfileImpl();
-        profile.setParameter(Profile.GUI, "true");
-
-        // Create the main container
+        profile.setParameter(Profile.MAIN_HOST, "localhost");
+        profile.setParameter(Profile.MAIN_PORT, "1099");
+        profile.setParameter(Profile.GUI, "true");  // Disable GUI
         AgentContainer mainContainer = runtime.createMainContainer(profile);
 
         try {
-            // Create Central Distributor agent
-            AgentController centralDistributor = mainContainer.createNewAgent("Central", "agents.Distributor", new Object[]{"central"});
+            // Create a Central Distributor
+            AgentController centralDistributor = mainContainer.createNewAgent("CentralDistributor",
+                    "Dist.Distributor", new Object[]{"central", 1000});
             centralDistributor.start();
 
-            // Create Local Distributor agents
-            AgentController local1 = mainContainer.createNewAgent("Local1", "agents.Distributor", new Object[]{"local"});
-            local1.start();
+            // Create Local Distributors
+            AgentController localDistributor1 = mainContainer.createNewAgent("LocalDistributor1",
+                    "Dist.Distributor", new Object[]{"local", 500});
+            localDistributor1.start();
 
-            AgentController local2 = mainContainer.createNewAgent("Local2", "agents.Distributor", new Object[]{"local"});
-            local2.start();
+            AgentController localDistributor2 = mainContainer.createNewAgent("LocalDistributor2",
+                    "Dist.Distributor", new Object[]{"local", 400});
+            localDistributor2.start();
 
-            // Create Home and Company agents under Local1
-            AgentController home1 = mainContainer.createNewAgent("Home1", "agents.Home", new Object[]{"Local1"});
-            home1.start();
+            // Create House Agents
+            AgentController house1 = mainContainer.createNewAgent("House1", "Dist.House", null);
+            house1.start();
 
-            AgentController company1 = mainContainer.createNewAgent("Company1", "agents.Company", new Object[]{"Local1"});
+            AgentController house2 = mainContainer.createNewAgent("House2", "Dist.House", null);
+            house2.start();
+
+            // Create Company Agents
+            AgentController company1 = mainContainer.createNewAgent("Company1", "Dist.Company", null);
             company1.start();
 
-            // Create Home and Company agents under Local2
-            AgentController home2 = mainContainer.createNewAgent("Home2", "agents.Home", new Object[]{"Local2"});
-            home2.start();
-
-            AgentController company2 = mainContainer.createNewAgent("Company2", "agents.Company", new Object[]{"Local2"});
+            AgentController company2 = mainContainer.createNewAgent("Company2", "Dist.Company", null);
             company2.start();
 
         } catch (StaleProxyException e) {
